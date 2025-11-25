@@ -1,0 +1,219 @@
+.etapas-container {
+  flex: 1;
+  padding: 30px;
+  margin-left: 250px;
+  width: calc(100% - 350px);
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.etapas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.etapas-titulo {
+  color: #031C30;
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.etapas-acoes {
+  display: flex;
+  gap: 15px;
+}
+
+.button,
+.button-nova,
+.button-cancelar,
+.button-salvar {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+  font-size: 14px;
+  background: #005599;
+  color: white;
+}
+
+.button:hover,
+.button-nova:hover,
+.button-cancelar:hover,
+.button-salvar:hover {
+  background: #2980b9;
+}
+
+.acoes-etapa {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+}
+
+.button-acao {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s;
+  font-family: 'Jost', sans-serif;
+  background-color: #005599;
+  color: white;
+}
+
+.button-acao:hover {
+  background-color: #2980b9;
+}
+
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #005599;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  font-weight: 500;
+  z-index: 999;
+  animation: fadein 0.5s, fadeout 0.5s 2s;
+}
+
+.filtros-container {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.grupo-filtro {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.filtro-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #031C30;
+}
+
+.lista-etapas {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  padding: 25px;
+}
+
+.titulo-secao {
+  color: #031C30;
+  margin-bottom: 20px;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.grade-etapas {
+  display: grid;
+  gap: 20px;
+}
+
+.cartao-etapa {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  transition: all 0.3s;
+  background: white;
+}
+
+.cartao-etapa:hover {
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.cabecalho-etapa {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.nome-etapa {
+  font-size: 18px;
+  font-weight: 600;
+  color: #031C30;
+  margin: 0;
+}
+
+.status-etapa {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: #cce7ff;
+  color: #004085;
+}
+
+.status-pendente { background: #cce7ff; color: #004085; }
+.status-em-andamento { background: #fff3cd; color: #856404; }
+.status-finalizada { background: #d4edda; color: #155724; }
+
+.titulo-funcionarios {
+  font-size: 14px;
+  font-weight: 600;
+  color: #031C30;
+  margin-bottom: 10px;
+}
+
+.badge-funcionario {
+  background: #f8f9fa;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-size: 12px;
+  color: #031C30;
+  border: 1px solid #dee2e6;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  animation: aparecer 0.3s ease;
+}
+
+.modal-title {
+  font-size: 20px;
+  color: #031C30;
+  font-weight: 600;
+}
+
+.fechar-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #005599;
+}
