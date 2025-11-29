@@ -1,100 +1,128 @@
 import React, { useState, useEffect } from "react";
+import api from "../services/api"; // Conexão com Back
 import "../styles/gerenciarPecas.css";
 
 function GerenciarPecas() {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarModalStatus, setMostrarModalStatus] = useState(false);
 
-  const [pecas, setPecas] = useState(() => {
-    const salvas = localStorage.getItem("pecas_global");
-    return salvas ? JSON.parse(salvas) : [];
-  });
+  // Estados do Banco
+  const [pecas, setPecas] = useState([]);
+  const [aeronaves, setAeronaves] = useState([]);
 
+  // Estados do Formulário
   const [novaPeca, setNovaPeca] = useState({
-    id: "",
     nome: "",
     tipo: "NACIONAL",
     fornecedor: "",
     status: "em producao",
+    aeronaveCodigo: "" // Obrigatório para o banco
   });
 
   const [pecaSelecionada, setPecaSelecionada] = useState("");
   const [novoStatus, setNovoStatus] = useState("em producao");
 
+  // 1. CARREGAR DADOS (GET)
   useEffect(() => {
-    localStorage.setItem("pecas_global", JSON.stringify(pecas));
-  }, [pecas]);
+    const carregarDados = async () => {
+      try {
+        const [resPecas, resAero] = await Promise.all([
+          api.get("/pecas"),
+          api.get("/aeronaves")
+        ]);
+        setPecas(resPecas.data);
+        setAeronaves(resAero.data);
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+      }
+    };
+    carregarDados();
+  }, []);
 
   const handleChange = (e) => {
     setNovaPeca({ ...novaPeca, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  // 2. CADASTRAR (POST)
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const idNumber = parseInt(novaPeca.id, 10);
-    if (isNaN(idNumber) || idNumber <= 0) {
-      alert("O ID deve ser um número positivo!");
+    if (!novaPeca.aeronaveCodigo) {
+      alert("Selecione uma aeronave para vincular a peça!");
       return;
     }
 
-    if (pecas.some((p) => p.id === idNumber)) {
-      alert("Já existe uma peça com esse ID!");
-      return;
+    try {
+      await api.post("/pecas", {
+        nome: novaPeca.nome,
+        tipo: novaPeca.tipo,
+        fornecedor: novaPeca.fornecedor,
+        status: novaPeca.status,
+        aeronaveCodigo: novaPeca.aeronaveCodigo
+      });
+
+      alert("Peça cadastrada com sucesso!");
+      setMostrarModal(false);
+      
+      // Recarrega lista
+      const res = await api.get("/pecas");
+      setPecas(res.data);
+
+      // Reseta form
+      setNovaPeca({ 
+        nome: "", 
+        tipo: "NACIONAL", 
+        fornecedor: "", 
+        status: "em producao", 
+        aeronaveCodigo: "" 
+      });
+
+    } catch (error) {
+      alert("Erro ao cadastrar peça: " + (error.response?.data?.error || "Erro desconhecido"));
     }
-
-    const nova = {
-      ...novaPeca,
-      id: idNumber,
-    };
-
-    setPecas([...pecas, nova]);
-    setNovaPeca({
-      id: "",
-      nome: "",
-      tipo: "NACIONAL",
-      fornecedor: "",
-      status: "em producao",
-    });
-    setMostrarModal(false);
   };
 
-  const excluirPeca = (id) => {
+  // 3. EXCLUIR (DELETE)
+  // Nota: Seu backend atual não tem rota DELETE para peças no controller que fiz. 
+  // Se precisar, descomente abaixo e adicione no backend.
+  const excluirPeca = async (id) => {
     if (window.confirm("Tem certeza que deseja excluir esta peça?")) {
-      setPecas(pecas.filter((p) => p.id !== id));
+      // await api.delete(`/pecas/${id}`); 
+      // setPecas(pecas.filter((p) => p.id !== id));
+      alert("Funcionalidade de exclusão pendente no servidor.");
     }
   };
 
-  const atualizarStatus = () => {
+  // 4. ATUALIZAR STATUS (PATCH)
+  const atualizarStatus = async () => {
     if (!pecaSelecionada) {
       alert("Selecione uma peça para atualizar o status.");
       return;
     }
 
-    setPecas((prev) =>
-      prev.map((p) =>
-        p.id === parseInt(pecaSelecionada)
-          ? { ...p, status: novoStatus }
-          : p
-      )
-    );
+    try {
+      await api.patch(`/pecas/${pecaSelecionada}/status`, { status: novoStatus });
+      
+      alert("Status atualizado!");
+      setMostrarModalStatus(false);
+      setPecaSelecionada("");
+      setNovoStatus("em producao");
 
-    setMostrarModalStatus(false);
-    setPecaSelecionada("");
-    setNovoStatus("em producao");
+      // Recarrega lista
+      const res = await api.get("/pecas");
+      setPecas(res.data);
+    } catch (error) {
+      alert("Erro ao atualizar status.");
+    }
   };
 
   const formatarStatus = (status) => {
-    switch (status) {
-      case "em producao":
-        return "Em produção";
-      case "em transporte":
-        return "Em transporte";
-      case "pronta para uso":
-        return "Pronta para uso";
-      default:
-        return status;
-    }
+    const mapa = {
+      "em producao": "Em produção",
+      "em transporte": "Em transporte",
+      "pronta para uso": "Pronta para uso"
+    };
+    return mapa[status] || status;
   };
 
   return (
@@ -122,13 +150,7 @@ function GerenciarPecas() {
             <div key={p.id} className="cartao-peca">
               <div className="cabecalho-peca">
                 <h3 className="nome-peca">{p.nome}</h3>
-                <span
-                  className={`tipo-peca ${
-                    p.tipo === "IMPORTADA"
-                      ? "tipo-importada"
-                      : "tipo-nacional"
-                  }`}
-                >
+                <span className={`tipo-peca ${p.tipo === "IMPORTADA" ? "tipo-importada" : "tipo-nacional"}`}>
                   {p.tipo}
                 </span>
               </div>
@@ -136,6 +158,7 @@ function GerenciarPecas() {
               <p><strong>ID:</strong> {p.id}</p>
               <p><strong>Fornecedor:</strong> {p.fornecedor || "Não informado"}</p>
               <p><strong>Status:</strong> {formatarStatus(p.status)}</p>
+              <p><strong>Aeronave:</strong> {p.aeronave ? p.aeronave.modelo : "N/A"}</p>
 
               <div className="acoes-peca">
                 <button
@@ -159,17 +182,21 @@ function GerenciarPecas() {
             </div>
 
             <form onSubmit={handleSubmit}>
+              
+              {/* CAMPO NOVO: AERONAVE (Obrigatório para o Back) */}
               <div className="form-group">
-                <label>ID</label>
-                <input
-                  type="number"
-                  name="id"
-                  value={novaPeca.id}
-                  onChange={handleChange}
+                <label>Vincular Aeronave</label>
+                <select 
+                  name="aeronaveCodigo" 
+                  value={novaPeca.aeronaveCodigo} 
+                  onChange={handleChange} 
                   required
-                  min="1"
-                  placeholder="Ex: 4"
-                />
+                >
+                  <option value="">Selecione...</option>
+                  {aeronaves.map(a => (
+                    <option key={a.codigo} value={a.codigo}>{a.modelo}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-group">
@@ -192,7 +219,7 @@ function GerenciarPecas() {
                   value={novaPeca.fornecedor}
                   onChange={handleChange}
                   required
-                  placeholder="Ex: Embraer, MIG..."
+                  placeholder="Ex: Embraer..."
                 />
               </div>
 

@@ -1,0 +1,126 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Aeronave {
+  codigo      Int           @id // ID manual (você digita o número no front)
+  modelo      String
+  tipo        TipoAeronave
+  capacidade  Int
+  alcance     Int
+  cliente     String
+  dataEntrega String
+
+  pecas       Peca[]
+  etapas      EtapaProducao[]
+  testes      Teste[]
+  relatorios  Relatorio[]
+
+  @@map("aeronaves")
+}
+
+model Funcionario {
+  id             Int           @id @default(autoincrement()) // ID Automático (1, 2, 3...)
+  nome           String
+  telefone       String
+  endereco       String
+  usuario        String        @unique
+  senha          String
+  nivelPermissao Permissao
+
+  etapas         EtapaProducao[]
+
+  @@map("funcionarios")
+}
+
+model Peca {
+  id         Int        @id @default(autoincrement()) // ID Automático
+  nome       String
+  tipo       TipoPeca
+  fornecedor String
+  status     StatusPeca
+
+  // Relação corrigida: aeronaveId agora é Int para bater com Aeronave.codigo
+  aeronaveId Int
+  aeronave   Aeronave   @relation(fields: [aeronaveId], references: [codigo], onDelete: Cascade)
+
+  @@map("pecas")
+}
+
+model EtapaProducao {
+  id             Int        @id @default(autoincrement()) // ID Automático
+  nome           String
+  prazoConclusao DateTime
+  status         Int        @default(0) // 0, 1, 2
+
+  // Relação corrigida: aeronaveId agora é Int
+  aeronaveId     Int
+  aeronave       Aeronave   @relation(fields: [aeronaveId], references: [codigo], onDelete: Cascade)
+
+  funcionarios   Funcionario[]
+
+  @@map("etapas_producao")
+}
+
+model Teste {
+  id         Int            @id @default(autoincrement()) // ID Automático
+  tipo       TipoTeste
+  resultado  ResultadoTeste
+
+  // Relação corrigida: aeronaveId agora é Int
+  aeronaveId Int
+  aeronave   Aeronave       @relation(fields: [aeronaveId], references: [codigo], onDelete: Cascade)
+
+  @@map("testes")
+}
+
+model Relatorio {
+  id          Int      @id @default(autoincrement())
+  data        DateTime @default(now())
+
+  // Relação corrigida: aeronaveId agora é Int
+  aeronaveId  Int
+  aeronave    Aeronave @relation(fields: [aeronaveId], references: [codigo], onDelete: Cascade)
+
+  @@map("relatorios")
+}
+
+enum TipoAeronave {
+  MILITAR   @map("militar")
+  COMERCIAL @map("comercial")
+}
+
+enum TipoPeca {
+  NACIONAL  @map("nacional")
+  IMPORTADA @map("importada")
+}
+
+enum StatusPeca {
+  EM_PRODUCAO   @map("em producao")
+  EM_TRANSPORTE @map("em transporte")
+  PRONTA        @map("pronta para uso")
+}
+
+enum TipoTeste {
+  ELETRICO     @map("eletrico")
+  HIDRAULICO   @map("hidraulico")
+  AERODINAMICO @map("aerodinamico")
+}
+
+enum ResultadoTeste {
+  APROVADO  @map("aprovado")
+  REPROVADO @map("reprovado")
+}
+
+enum Permissao {
+  ADMINISTRADOR @map("administrador")
+  ENGENHEIRO    @map("engenheiro")
+  OPERADOR      @map("operador")
+}

@@ -1,27 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../services/api";
 import "../styles/login.css";
 
 function Login() {
   const navigate = useNavigate();
   const [usuario, setUsuario] = useState("");
   const [senha, setSenha] = useState("");
-  const [usuarios, setUsuarios] = useState([]);
 
-  useEffect(() => {
-    const padroes = [
-      { usuario: "admin", senha: "123", cargo: "Administrador" },
-      { usuario: "engenheiro", senha: "123", cargo: "Engenheiro" },
-      { usuario: "operador", senha: "123", cargo: "Operador" },
-    ];
-
-    const cadastrados =
-      JSON.parse(localStorage.getItem("usuariosExtra_global")) || [];
-
-    setUsuarios([...padroes, ...cadastrados]);
-  }, []);
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!usuario || !senha) {
@@ -29,18 +16,25 @@ function Login() {
       return;
     }
 
-    const user = usuarios.find(
-      (u) =>
-        u.usuario.trim().toLowerCase() === usuario.trim().toLowerCase() &&
-        u.senha.trim() === senha.trim()
-    );
+    try {
+      const response = await api.post("/funcionarios/login", {
+        usuario: usuario.trim(),
+        senha: senha.trim(),
+      });
 
-    if (user) {
-      localStorage.setItem("cargo", user.cargo);
-      localStorage.setItem("usuario", user.usuario);
+      const funcionario = response.data;
+      localStorage.setItem("cargo", funcionario.nivelPermissao); 
+      localStorage.setItem("usuario", funcionario.usuario);
+      
+      localStorage.setItem("userId", funcionario.id);
+
+      alert(`Login realizado com sucesso! Bem-vindo(a) ${funcionario.nome}`);
       navigate("/gerenciarAeronaves");
-    } else {
-      alert("Usuário ou senha inválidos!");
+
+    } catch (error) {
+      console.error("Erro no login:", error);
+      const msg = error.response?.data?.error || "Erro ao conectar com o servidor";
+      alert(msg);
     }
   };
 

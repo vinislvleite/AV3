@@ -5,7 +5,7 @@ import "../styles/sidebar.css";
 function SideBar() {
   const [active, setActive] = useState("aeronaves");
   const [nome, setNome] = useState("Usuário");
-  const [cargo, setCargo] = useState("Desconhecido");
+  const [cargo, setCargo] = useState(""); // Inicializa vazio
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -13,29 +13,36 @@ function SideBar() {
   useEffect(() => {
     const usuarioSalvo = localStorage.getItem("usuario");
     const cargoSalvo = localStorage.getItem("cargo");
+
     if (usuarioSalvo) setNome(usuarioSalvo);
-    if (cargoSalvo) setCargo(cargoSalvo);
+    
+    // MUDANÇA NECESSÁRIA 1: Normalizar para minúsculo
+    // Isso garante que "Administrador" ou "ADMINISTRADOR" vire "administrador"
+    // e bata com as chaves do objeto 'menus' abaixo.
+    if (cargoSalvo) setCargo(cargoSalvo.toLowerCase());
   }, []);
 
   const menus = {
-    Administrador: [
+    // Chaves em minúsculo para bater com a normalização acima
+    administrador: [
       { id: "aeronaves", nome: "Gerenciar Aeronaves", path: "/gerenciarAeronaves" },
       { id: "funcionarios", nome: "Gerenciar Funcionários", path: "/gerenciarFuncionarios" },
       { id: "pecas", nome: "Gerenciar Peças", path: "/gerenciarPecas" },
       { id: "testes", nome: "Gerenciar Testes", path: "/gerenciarTestes" },
     ],
-    Engenheiro: [
+    engenheiro: [
       { id: "aeronaves", nome: "Gerenciar Aeronaves", path: "/gerenciarAeronaves" },
       { id: "pecas", nome: "Gerenciar Peças", path: "/gerenciarPecas" },
       { id: "testes", nome: "Gerenciar Testes", path: "/gerenciarTestes" },
     ],
-    Operador: [
+    operador: [
       { id: "aeronaves", nome: "Gerenciar Aeronaves", path: "/gerenciarAeronaves" },
       { id: "pecas", nome: "Visualizar Peças", path: "/gerenciarPecas" },
       { id: "testes", nome: "Visualizar Testes", path: "/gerenciarTestes" },
     ],
   };
 
+  // Garante que se o cargo não existir, não quebra a tela
   const botoes = menus[cargo] || [];
 
   useEffect(() => {
@@ -51,31 +58,11 @@ function SideBar() {
     navigate(path);
   };
 
+  // MUDANÇA NECESSÁRIA 2: Limpeza do Logout
+  // Como agora usamos banco de dados, não precisamos salvar/restaurar
+  // 'aeronaves_global' ou 'pecas_global' no localStorage. Só limpar a sessão.
   const handleLogout = () => {
-    const dadosGlobais = {
-      aeronaves: localStorage.getItem("aeronaves_global"),
-      pecas: localStorage.getItem("pecas_global"),
-      etapas: localStorage.getItem("etapas_global"),
-      funcionarios: localStorage.getItem("funcionarios_global"),
-      testes: localStorage.getItem("testes_global"),
-      usuariosExtra: localStorage.getItem("usuariosExtra_global"),
-    };
-
     localStorage.clear();
-
-    if (dadosGlobais.aeronaves)
-      localStorage.setItem("aeronaves_global", dadosGlobais.aeronaves);
-    if (dadosGlobais.pecas)
-      localStorage.setItem("pecas_global", dadosGlobais.pecas);
-    if (dadosGlobais.etapas)
-      localStorage.setItem("etapas_global", dadosGlobais.etapas);
-    if (dadosGlobais.funcionarios)
-      localStorage.setItem("funcionarios_global", dadosGlobais.funcionarios);
-    if (dadosGlobais.testes)
-      localStorage.setItem("testes_global", dadosGlobais.testes);
-    if (dadosGlobais.usuariosExtra)
-      localStorage.setItem("usuariosExtra_global", dadosGlobais.usuariosExtra);
-
     navigate("/");
   };
 
@@ -85,7 +72,8 @@ function SideBar() {
         <img src="/perfil_icon.png" alt="Ícone perfil" className="icon-usuario" />
         <div className="perfil-info">
           <h3>{nome}</h3>
-          <p>{cargo}</p>
+          {/* Exibe com a primeira letra maiúscula apenas visualmente */}
+          <p>{cargo ? cargo.charAt(0).toUpperCase() + cargo.slice(1) : "..."}</p>
         </div>
         <img
           src="/sair_icon.png"

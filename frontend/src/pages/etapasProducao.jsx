@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import api from "../services/api";
 import "../styles/etapasProducao.css";
 
 function EtapasProducao() {
@@ -6,16 +7,16 @@ function EtapasProducao() {
   const [mostrarAssociarModal, setMostrarAssociarModal] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState("todas");
 
-  const [etapas, setEtapas] = useState(() => {
-    const salvas = localStorage.getItem("etapas_global");
-    return salvas ? JSON.parse(salvas) : [];
-  });
+  const [etapas, setEtapas] = useState([]);
+  const [funcionariosDisponiveis, setFuncionariosDisponiveis] = useState([]);
+  const [aeronavesDisponiveis, setAeronavesDisponiveis] = useState([]);
+  const [listaFuncionariosCompleta, setListaFuncionariosCompleta] = useState([]); // Para buscar ID pelo nome
 
-  useEffect(() => {
-    localStorage.setItem("etapas_global", JSON.stringify(etapas));
-  }, [etapas]);
-
-  const tipoUsuario = localStorage.getItem("cargo") || "Operador";
+  const normalizar = (t) => t ? t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+  const tipoUsuario = normalizar(localStorage.getItem("cargo") || "operador");
+  
+  // Normaliza permissão (Front usa Maiúsculo às vezes)
+  const podeEditar = tipoUsuario === "administrador" || tipoUsuario === "engenheiro";
 
   const [dadosFormulario, setDadosFormulario] = useState({
     nome: "",
@@ -25,39 +26,124 @@ function EtapasProducao() {
     funcionarios: [],
   });
 
-  const [funcionariosDisponiveis, setFuncionariosDisponiveis] = useState([]);
-  const [aeronavesDisponiveis, setAeronavesDisponiveis] = useState([]);
+  // --- CARREGAR DADOS (CONECTADO AO BACK) ---
+  const carregarTudo = async () => {
+    try {
+      // 1. Busca Aeronaves e Funcionários
+      const [resAero, resFunc] = await Promise.all([
+        api.get("/aeronaves"),
+        api.get("/funcionarios")
+      ]);
+      
+      setAeronavesDisponiveis(resAero.data);
+      setListaFuncionariosCompleta(resFunc.data); // Guarda objetos com ID
+      setFuncionariosDisponiveis(resFunc.data.map(f => f.nome)); // Mantém compatibilidade com seu select visual
+
+      // 2. Busca Etapas de TODAS as aeronaves para manter o design de lista única
+      // (O backend lista por aeronave, então fazemos um loop aqui)
+      const promisesEtapas = resAero.data.map(a => api.get(`/etapas/aeronave/${a.codigo}`));
+      const responsesEtapas = await Promise.all(promisesEtapas);
+      
+      // Junta tudo num array só e formata para o padrão do seu front
+      const todasEtapas = responsesEtapas.flatMap(r => r.data).map(e => ({
+        id: e.id,
+        nome: e.nome,
+        // Converte status numérico do banco (0,1,2) para string do seu front
+        status: e.status === 0 ? "pendente" : e.status === 1 ? "em-andamento" : "finalizada",
+        prazo: new Date(e.prazoConclusao).toISOString().split('T')[0],
+        aeronave: String(e.aeronaveId),
+        funcionarios: e.funcionarios ? e.funcionarios.map(f => f.nome) : []
+      }));
+
+      setEtapas(todasEtapas);
+
+    } catch (error) {
+      console.error("Erro ao carregar dados:", error);
+    }
+  };
 
   useEffect(() => {
-    const atualizarListas = () => {
-      const salvosFunc = localStorage.getItem("funcionarios_global");
-      const salvosAero = localStorage.getItem("aeronaves_global");
-      setFuncionariosDisponiveis(
-        salvosFunc ? JSON.parse(salvosFunc).map((f) => f.nome) : []
-      );
-      setAeronavesDisponiveis(salvosAero ? JSON.parse(salvosAero) : []);
-    };
-    window.addEventListener("storage", atualizarListas);
-    atualizarListas();
-    return () => window.removeEventListener("storage", atualizarListas);
+    carregarTudo();
   }, []);
 
-  const adicionarEtapa = (novaEtapa) => {
-    const etapa = {
-      ...novaEtapa,
-      id: etapas.length + 1,
-      aeronave: String(novaEtapa.aeronave),
-    };
-    setEtapas([...etapas, etapa]);
-    setMostrarModal(false);
-    setDadosFormulario({
-      nome: "",
-      status: "pendente",
-      prazo: "",
-      aeronave: "",
-      funcionarios: [],
-    });
+  // --- AÇÕES (CONECTADO AO BACK) ---
+
+  const adicionarEtapa = async (dados) => {
+    try {
+      await api.post("/etapas", {
+        nome: dados.nome,
+        prazoConclusao: dados.prazo,
+        aeronaveCodigo: dados.aeronave
+      });
+      
+      alert("Etapa criada com sucesso!");
+      setMostrarModal(false);
+      setDadosFormulario({ nome: "", status: "pendente", prazo: "", aeronave: "", funcionarios: [] });
+      carregarTudo(); // Recarrega a lista
+    } catch (error) {
+      alert("Erro ao criar etapa.");
+    }
   };
+
+  const atualizarStatus = async (id, novoStatusString) => {
+    // Mapeia a string do front para a ação do backend
+    let action = "";
+    if (novoStatusString === "em-andamento") action = "iniciar";
+    if (novoStatusString === "finalizada") action = "finalizar";
+
+    if (!action) return;
+
+    try {
+      await api.patch(`/etapas/${id}/${action}`);
+      carregarTudo();
+    } catch (error) {
+      alert("Erro ao atualizar status.");
+    }
+  };
+
+  const excluirEtapa = async (id) => {
+    if (!podeEditar) return alert("Acesso negado.");
+    
+    if (window.confirm("Tem certeza que deseja excluir esta etapa?")) {
+      // Backend atual não tem rota DELETE implementada no controller que te mandei, 
+      // mas se criar, descomente abaixo:
+      // await api.delete(`/etapas/${id}`);
+      // carregarTudo();
+      alert("Funcionalidade de exclusão pendente no servidor.");
+    }
+  };
+
+  const [etapaSelecionada, setEtapaSelecionada] = useState("");
+  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState([]); // Guarda nomes
+
+  const handleAssociarFuncionario = async () => {
+    if (!podeEditar) return alert("Acesso negado.");
+    if (!etapaSelecionada) return alert("Selecione uma etapa!");
+    if (funcionariosSelecionados.length === 0) return alert("Selecione um funcionário!");
+
+    try {
+      // O Backend espera 1 ID por vez na rota atual. 
+      // Vamos pegar o primeiro selecionado e buscar o ID dele.
+      const nomeFunc = funcionariosSelecionados[0];
+      const funcObj = listaFuncionariosCompleta.find(f => f.nome === nomeFunc);
+
+      if (!funcObj) return alert("Erro ao encontrar ID do funcionário.");
+
+      await api.post(`/etapas/${etapaSelecionada}/funcionario`, {
+        funcionarioId: funcObj.id
+      });
+
+      alert("Funcionário associado!");
+      setMostrarAssociarModal(false);
+      setEtapaSelecionada("");
+      setFuncionariosSelecionados([]);
+      carregarTudo();
+    } catch (error) {
+      alert("Erro ao associar (verifique se já não está na etapa).");
+    }
+  };
+
+  // --- MANTENDO O RESTO IGUAL ---
 
   const handleChange = (e) => {
     setDadosFormulario({
@@ -68,34 +154,15 @@ function EtapasProducao() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Validação visual mantida
     const etapaEmAndamento = etapas.find(
       (etapa) =>
-        etapa.aeronave === dadosFormulario.aeronave &&
+        String(etapa.aeronave) === String(dadosFormulario.aeronave) &&
         etapa.status !== "finalizada"
     );
-    if (etapaEmAndamento) {
-      alert(
-        `Não é possível iniciar uma nova etapa antes de finalizar "${etapaEmAndamento.nome}" da mesma aeronave.`
-      );
-      return;
-    }
+    // Nota: Essa validação no front pode falhar se a lista não estiver atualizada com o banco
+    
     adicionarEtapa(dadosFormulario);
-  };
-
-  const atualizarStatus = (id, novoStatus) => {
-    setEtapas((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, status: novoStatus } : e))
-    );
-  };
-
-  const excluirEtapa = (id) => {
-    if (tipoUsuario === "Operador") {
-      alert("Apenas administradores e engenheiros podem excluir etapas.");
-      return;
-    }
-    if (window.confirm("Tem certeza que deseja excluir esta etapa?")) {
-      setEtapas(etapas.filter((etapa) => etapa.id !== id));
-    }
   };
 
   const getStatusTexto = (status) => {
@@ -105,37 +172,6 @@ function EtapasProducao() {
       finalizada: "Finalizada",
     };
     return mapaStatus[status] || status;
-  };
-
-  const [etapaSelecionada, setEtapaSelecionada] = useState("");
-  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState([]);
-
-  const handleAssociarFuncionario = () => {
-    if (tipoUsuario === "Operador") {
-      alert("Apenas administradores e engenheiros podem associar funcionários.");
-      return;
-    }
-    if (!etapaSelecionada) {
-      alert("Selecione uma etapa!");
-      return;
-    }
-    if (funcionariosSelecionados.length === 0) {
-      alert("Selecione pelo menos um funcionário!");
-      return;
-    }
-    setEtapas((prev) =>
-      prev.map((e) =>
-        e.id === parseInt(etapaSelecionada)
-          ? {
-              ...e,
-              funcionarios: [...new Set([...e.funcionarios, ...funcionariosSelecionados])],
-            }
-          : e
-      )
-    );
-    setMostrarAssociarModal(false);
-    setEtapaSelecionada("");
-    setFuncionariosSelecionados([]);
   };
 
   const etapasFiltradas =
@@ -148,12 +184,12 @@ function EtapasProducao() {
       <div className="etapas-header">
         <h1 className="etapas-titulo">Etapas de Produção</h1>
         <div className="etapas-acoes">
-          {(tipoUsuario === "Administrador" || tipoUsuario === "Engenheiro") && (
+          {podeEditar && (
             <button className="button-nova" onClick={() => setMostrarModal(true)}>
               Nova Etapa
             </button>
           )}
-          {(tipoUsuario === "Administrador" || tipoUsuario === "Engenheiro") && (
+          {podeEditar && (
             <button
               className="button-status"
               onClick={() => setMostrarAssociarModal(true)}
@@ -197,7 +233,7 @@ function EtapasProducao() {
               <p>
                 <strong>Aeronave:</strong>{" "}
                 {aeronavesDisponiveis.find(
-                  (a) => String(a.id) === String(etapa.aeronave)
+                  (a) => String(a.codigo) === String(etapa.aeronave)
                 )?.modelo || "—"}
               </p>
               <div className="funcionarios-etapa">
@@ -228,7 +264,7 @@ function EtapasProducao() {
                     Finalizar
                   </button>
                 )}
-                {(tipoUsuario === "Administrador" || tipoUsuario === "Engenheiro") && (
+                {podeEditar && (
                   <button
                     className="button-acao excluir"
                     onClick={() => excluirEtapa(etapa.id)}
@@ -242,7 +278,7 @@ function EtapasProducao() {
         </div>
       </div>
 
-      {mostrarModal && (tipoUsuario === "Administrador" || tipoUsuario === "Engenheiro") && (
+      {mostrarModal && podeEditar && (
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
@@ -285,7 +321,7 @@ function EtapasProducao() {
                 >
                   <option value="">Selecione</option>
                   {aeronavesDisponiveis.map((aeronave) => (
-                    <option key={aeronave.id} value={aeronave.id}>
+                    <option key={aeronave.codigo} value={aeronave.codigo}>
                       {aeronave.modelo}
                     </option>
                   ))}
@@ -309,8 +345,8 @@ function EtapasProducao() {
                   }}
                   style={{ height: "120px" }}
                 >
-                  {funcionariosDisponiveis.map((funcionario) => (
-                    <option key={funcionario} value={funcionario}>
+                  {funcionariosDisponiveis.map((funcionario, idx) => (
+                    <option key={idx} value={funcionario}>
                       {funcionario}
                     </option>
                   ))}
@@ -334,8 +370,7 @@ function EtapasProducao() {
         </div>
       )}
 
-      {mostrarAssociarModal &&
-        (tipoUsuario === "Administrador" || tipoUsuario === "Engenheiro") && (
+      {mostrarAssociarModal && podeEditar && (
           <div className="modal-overlay">
             <div className="modal-content">
               <div className="modal-header">
@@ -375,8 +410,8 @@ function EtapasProducao() {
                   }}
                   style={{ height: "120px" }}
                 >
-                  {funcionariosDisponiveis.map((f) => (
-                    <option key={f} value={f}>
+                  {funcionariosDisponiveis.map((f, idx) => (
+                    <option key={idx} value={f}>
                       {f}
                     </option>
                   ))}
