@@ -36,6 +36,6 @@ npm run dev<br>
 (A interface rodará na porta 5173).
 
 ### 4. Usuários já criados:
-Administrador = admin senha:123 <br>
+Administrador: admin senha:123 <br>
 Engenheiro: engenheiro senha:123 <br>
 Operador: operador senha: 123
