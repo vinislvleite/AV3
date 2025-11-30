@@ -9,7 +9,6 @@ export class AeronaveController {
             await service.cadastrar(req.body);
             return res.status(201).json({ message: "Aeronave cadastrada com sucesso!" });
         } catch (error: any) {
-            // Retorna a mensagem de erro específica capturada no Service
             return res.status(400).json({ error: error.message || "Erro ao cadastrar aeronave" });
         }
     }
@@ -49,7 +48,7 @@ export class AeronaveController {
         const { codigo } = req.params;
         try {
             await service.remover(Number(codigo));
-            return res.status(204).send(); // 204 No Content
+            return res.status(204).send();
         } catch (error: any) {
             return res.status(400).json({ error: error.message || "Erro ao remover aeronave" });
         }

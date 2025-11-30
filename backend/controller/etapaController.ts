@@ -87,7 +87,6 @@ export class EtapaController {
             if (error.message.includes("não encontrada")) {
                 return res.status(404).json({ error: error.message });
             }
-            // Erro P2003 (Foreign Key) não deve ocorrer aqui, pois as etapas não têm FK para outras tabelas que não cascateiam.
             return res.status(500).json({ error: "Erro ao excluir etapa.", details: error.message });
         }
     }

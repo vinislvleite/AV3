@@ -1,11 +1,9 @@
 import { Request, Response } from "express";
 import { PecaService } from "../services/pecaService";
-// IMPORTANTE: Adicione a importação do tipo StatusPeca (se não estiver já em services/pecaService)
 import { StatusPeca } from '@prisma/client'; 
 
 const service = new PecaService();
 
-// Função auxiliar para mapear a string do body para a constante Enum
 const mapStatusToEnumKey = (status: string): StatusPeca => {
     switch (status) {
         case 'em producao': return 'EM_PRODUCAO' as StatusPeca;
@@ -24,7 +22,6 @@ export class PecaController {
         }
         
         try {
-            // Aqui o Service espera dadosPeca.status como string (ex: 'EM_PRODUCAO')
             await service.cadastrar(dadosPeca, Number(aeronaveCodigo));
             return res.status(201).json({ message: "Peça cadastrada!" });
         } catch (error: any) {
@@ -50,7 +47,6 @@ export class PecaController {
         }
         
         try {
-            // CORREÇÃO AQUI: Mapeia a string recebida (ex: 'em producao') para o tipo Enum (StatusPeca.EM_PRODUCAO)
             const novoStatusEnum = mapStatusToEnumKey(status);
 
             await service.atualizarStatus(Number(id), novoStatusEnum);

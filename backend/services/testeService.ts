@@ -1,7 +1,6 @@
 import { TipoTeste, ResultadoTeste } from "@prisma/client";
 import { prisma } from "../db"; 
 
-// Definindo a interface de dados para o service
 interface TesteDados {
     nome: string;
     tipo: TipoTeste;
@@ -11,7 +10,6 @@ interface TesteDados {
 export class TesteService {
 
     public async cadastrarTeste(dados: TesteDados, aeronaveCodigo: number): Promise<void> {
-        // A falha ocorre aqui. Vamos garantir que o objeto 'data' seja construído com tipos conhecidos.
         const dadosParaCriar = {
             nome: dados.nome,
             tipo: dados.tipo,
@@ -20,7 +18,6 @@ export class TesteService {
         };
 
         try {
-            // Usamos o objeto de dados explicitamente construído
             await prisma.teste.create({
                 data: dadosParaCriar,
             });

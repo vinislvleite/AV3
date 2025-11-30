@@ -8,13 +8,15 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:prep": "npm run db:push && npm run db:generate && npm run db:seed",
     "dev": "npm run db:prep && tsx watch server.ts",
-    "start": "tsx server.ts"
+    "start": "tsx server.ts",
+    "test:load": "tsx teste.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "express": "^5.1.0"

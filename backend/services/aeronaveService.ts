@@ -6,7 +6,6 @@ export class AeronaveService {
         try {
             await prisma.aeronave.create({
                 data: {
-                    // Garante que o código é tratado como número
                     codigo: Number(dados.codigo), 
                     modelo: dados.modelo,
                     tipo: dados.tipo,
@@ -17,7 +16,6 @@ export class AeronaveService {
                 }
             });
         } catch (error: any) {
-            // Se o erro for de chave duplicada (P2002)
             if (error.code === 'P2002' && error.meta?.target.includes('codigo')) {
                 throw new Error(`O código ${dados.codigo} já está em uso.`);
             }
@@ -47,7 +45,6 @@ export class AeronaveService {
     }
 
     public async remover(codigo: number): Promise<void> {
-        // Verifica se a aeronave existe
         const aeronave = await prisma.aeronave.findUnique({ where: { codigo } });
         if (!aeronave) throw new Error("Aeronave não encontrada.");
 
@@ -56,7 +53,6 @@ export class AeronaveService {
                 where: { codigo }
             });
         } catch (error: any) {
-             // Caso tente deletar uma aeronave que ainda tenha Peças ou Etapas vinculadas (Foreign Key)
             if (error.code === 'P2003') {
                 throw new Error("Não é possível remover a aeronave. Existem peças ou etapas de produção vinculadas.");
             }
