@@ -41,7 +41,6 @@ function GerenciarFuncionarios() {
         senha: novoFuncionario.senha,
         telefone: novoFuncionario.telefone,
         endereco: novoFuncionario.endereco,
-        // CORREÇÃO: Envia em MAIÚSCULO para corresponder ao Enum do Backend (ADMINISTRADOR)
         nivelPermissao: novoFuncionario.nivelPermissao.toUpperCase(), 
       });
 
@@ -74,7 +73,6 @@ function GerenciarFuncionarios() {
     }
   };
 
-  // NOVA FUNÇÃO: Formata 'ADMINISTRADOR' para 'Administrador'
   const formatarNivel = (nivel) => {
     if (!nivel) return "";
     const lower = nivel.toLowerCase();
@@ -100,7 +98,6 @@ function GerenciarFuncionarios() {
                 <h3>{f.nome}</h3>
                 <p><strong>Usuário:</strong> {f.usuario}</p>
                 <p><strong>Telefone:</strong> {f.telefone}</p>
-                {/* APLICAÇÃO DA FUNÇÃO AQUI: */}
                 <p><strong>Nível:</strong> {formatarNivel(f.nivelPermissao)}</p>
               </div>
               <div className="acoes-funcionario">

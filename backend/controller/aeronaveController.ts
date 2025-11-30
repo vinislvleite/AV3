@@ -53,4 +53,15 @@ export class AeronaveController {
             return res.status(400).json({ error: error.message || "Erro ao remover aeronave" });
         }
     }
+
+    async gerarRelatorioData(req: Request, res: Response) {
+        const { codigo } = req.params;
+        try {
+            const dados = await service.buscarPorCodigo(Number(codigo)); 
+            if (!dados) return res.status(404).json({ error: "Aeronave não encontrada para relatório." });
+            return res.json(dados);
+        } catch (error) {
+            return res.status(500).json({ error: "Erro ao gerar dados do relatório." });
+        }
+    }
 }

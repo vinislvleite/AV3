@@ -100,7 +100,16 @@ function GerenciarTestes() {
           "REPROVADO": "Reprovado"
       };
       return mapa[resultado] || resultado;
-  }
+  };
+
+  const formatarTipoTeste = (tipo) => {
+      const mapa = {
+          "ELETRICO": "Elétrico",
+          "HIDRAULICO": "Hidráulico",
+          "AERODINAMICO": "Aerodinâmico"
+      };
+      return mapa[tipo] || tipo;
+  };
   
   const getModeloAeronave = (aeronaveId) => {
     return aeronaves.find(a => a.codigo === aeronaveId)?.modelo || 'N/A';
@@ -135,12 +144,12 @@ function GerenciarTestes() {
                       : "resultado-reprovado"
                   }`}
                 >
-                  {formatarResultado(t.resultado).toUpperCase()}
+                  {formatarResultado(t.resultado)}
                 </span>
               </div>
 
               <p><strong>Aeronave:</strong> {getModeloAeronave(t.aeronaveId)}</p>
-              <p><strong>Tipo de Teste:</strong> {t.tipo}</p>
+              <p><strong>Tipo de Teste:</strong> {formatarTipoTeste(t.tipo)}</p>
               <p><strong>ID: {t.id}</strong></p>
 
               <div className="acoes-teste">

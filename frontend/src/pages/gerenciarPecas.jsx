@@ -9,7 +9,6 @@ function GerenciarPecas() {
   const [pecas, setPecas] = useState([]);
   const [aeronaves, setAeronaves] = useState([]);
 
-  // ESTADO CORRIGIDO: Usa a constante Enum (CAPS LOCK)
   const [novaPeca, setNovaPeca] = useState({
     nome: "",
     tipo: "NACIONAL",
@@ -18,7 +17,6 @@ function GerenciarPecas() {
     aeronaveCodigo: "" 
   });
 
-  // ESTADO CORRIGIDO: Usa a constante Enum (CAPS LOCK)
   const [pecaSelecionada, setPecaSelecionada] = useState("");
   const [novoStatus, setNovoStatus] = useState("EM_PRODUCAO");
 
@@ -56,7 +54,7 @@ function GerenciarPecas() {
         nome: novaPeca.nome,
         tipo: novaPeca.tipo,
         fornecedor: novaPeca.fornecedor,
-        status: novaPeca.status, // Agora é 'EM_PRODUCAO'
+        status: novaPeca.status,
         aeronaveCodigo: novaPeca.aeronaveCodigo
       });
 
@@ -98,13 +96,12 @@ function GerenciarPecas() {
     }
 
     try {
-      // Envia o Enum Key (EM_PRODUCAO) que será mapeado no Controller
       await api.patch(`/pecas/${pecaSelecionada}/status`, { status: novoStatus });
       
       alert("Status atualizado!");
       setMostrarModalStatus(false);
       setPecaSelecionada("");
-      setNovoStatus("EM_PRODUCAO"); // Reseta para a constante
+      setNovoStatus("EM_PRODUCAO");
 
       carregarDados();
     } catch (error) {
@@ -113,7 +110,6 @@ function GerenciarPecas() {
     }
   };
 
-  // Mapeia o ENUM KEY (CAPS LOCK) para o texto de exibição
   const formatarStatus = (status) => {
     const mapa = {
       "EM_PRODUCAO": "Em produção",
@@ -283,7 +279,6 @@ function GerenciarPecas() {
                 value={novoStatus}
                 onChange={(e) => setNovoStatus(e.target.value)}
               >
-                {/* VALORES CORRIGIDOS: Usam a chave Enum */}
                 <option value="EM_PRODUCAO">Em produção</option>
                 <option value="EM_TRANSPORTE">Em transporte</option>
                 <option value="PRONTA">Pronta para uso</option>

@@ -102,8 +102,221 @@ function GerenciarAeronaves() {
     });
   };
 
-  const gerarRelatorio = (aeronave) => {
-    alert(`Gerar PDF para ${aeronave.modelo} (Funcionalidade pendente)`);
+  const formatarTexto = (texto) => {
+    if (!texto) return "";
+    return texto
+      .toString()
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const gerarRelatorio = async (aeronave) => {
+    try {
+        const response = await api.get(`/aeronaves/${aeronave.codigo}/relatorio`);
+        const dados = response.data; 
+
+        const doc = new jsPDF();
+        
+        const primaryColor = [3, 28, 48]; 
+        const secondaryColor = [80, 80, 80]; 
+        const lineColor = [200, 200, 200]; 
+
+        // CABEÇALHO PADRÃO
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, 210, 35, "F");
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18); // Título Principal
+        doc.text("RELATÓRIO DA AERONAVE", 105, 18, { align: "center" });
+        
+        doc.setFontSize(12); // Subtítulo (Modelo)
+        doc.setFont("helvetica", "normal");
+        doc.text(dados.modelo.toUpperCase(), 105, 26, { align: "center" });
+
+        // Dados de Emissão
+        doc.setFontSize(9);
+        doc.text(`Emissão: ${new Date().toLocaleDateString("pt-BR")}`, 195, 30, { align: "right" });
+        doc.text(`ID: #${dados.codigo}`, 15, 30, { align: "left" });
+
+        let y = 50;
+        const fontSizeTitulo = 12;
+        const fontSizeCorpo = 10;
+        const espacoTitulo = 8;
+        const espacoLinha = 6;
+
+        // --- 1. FICHA TÉCNICA ---
+        doc.setTextColor(...primaryColor);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(fontSizeTitulo);
+        doc.text("Ficha Técnica", 15, y);
+        
+        y += 2;
+        doc.setDrawColor(...lineColor);
+        doc.setLineWidth(0.5);
+        doc.line(15, y, 195, y);
+        y += espacoTitulo;
+
+        // Coluna 1
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(fontSizeCorpo);
+        
+        doc.setFont("helvetica", "bold"); doc.text("Cliente:", 15, y);
+        doc.setFont("helvetica", "normal"); doc.text(dados.cliente, 35, y);
+        
+        doc.setFont("helvetica", "bold"); doc.text("Tipo:", 15, y + espacoLinha);
+        doc.setFont("helvetica", "normal"); doc.text(formatarTexto(dados.tipo), 35, y + espacoLinha);
+
+        // Coluna 2
+        doc.setFont("helvetica", "bold"); doc.text("Capacidade:", 110, y);
+        doc.setFont("helvetica", "normal"); doc.text(`${dados.capacidade} passageiros`, 140, y);
+
+        doc.setFont("helvetica", "bold"); doc.text("Alcance:", 110, y + espacoLinha);
+        doc.setFont("helvetica", "normal"); doc.text(`${dados.alcance} km`, 140, y + espacoLinha);
+
+        y += 20;
+
+        // --- 2. PEÇAS ---
+        doc.setTextColor(...primaryColor);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(fontSizeTitulo);
+        doc.text("Componentes e Peças", 15, y);
+        
+        y += 2;
+        doc.setDrawColor(...lineColor);
+        doc.line(15, y, 195, y);
+        y += espacoTitulo;
+
+        doc.setFontSize(fontSizeCorpo);
+        doc.setTextColor(0, 0, 0);
+
+        if (dados.pecas && dados.pecas.length > 0) {
+            dados.pecas.forEach((peca, index) => {
+                if (index % 2 !== 0) {
+                    doc.setFillColor(245, 245, 245);
+                    doc.rect(15, y - 4, 180, espacoLinha, "F");
+                }
+                
+                doc.setFont("helvetica", "bold");
+                doc.text(`• ${peca.nome}`, 18, y);
+                
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(...secondaryColor);
+                // Ajuste de espaçamento horizontal para não sobrepor
+                doc.text(`|  Forn: ${peca.fornecedor}`, 85, y);
+                doc.text(`|  Status: ${formatarTexto(peca.status)}`, 140, y);
+                doc.setTextColor(0, 0, 0);
+                
+                y += espacoLinha;
+            });
+        } else {
+            doc.setFont("helvetica", "italic");
+            doc.setTextColor(...secondaryColor);
+            doc.text("Nenhuma peça registrada.", 18, y);
+            y += espacoLinha;
+        }
+
+        y += 10;
+
+        // --- 3. ETAPAS DE PRODUÇÃO ---
+        doc.setTextColor(...primaryColor);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(fontSizeTitulo);
+        doc.text("Cronograma de Produção", 15, y);
+        
+        y += 2;
+        doc.setDrawColor(...lineColor);
+        doc.line(15, y, 195, y);
+        y += espacoTitulo;
+
+        if (dados.etapas && dados.etapas.length > 0) {
+            dados.etapas.forEach((etapa) => {
+                const statusMap = { 0: "Pendente", 1: "Em Andamento", 2: "Finalizada" };
+                const statusLabel = statusMap[etapa.status] || "Pendente";
+                const dataPrazo = new Date(etapa.prazoConclusao).toLocaleDateString('pt-BR');
+
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(0, 0, 0);
+                doc.text(etapa.nome, 18, y);
+
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(...secondaryColor);
+                doc.text(`Prazo: ${dataPrazo}`, 120, y);
+                
+                // Status Colorido
+                if(etapa.status === 2) doc.setTextColor(0, 128, 0); // Verde
+                else if(etapa.status === 1) doc.setTextColor(200, 150, 0); // Laranja
+                else doc.setTextColor(150, 0, 0); // Vermelho
+                
+                // Ajuste: Status Formatado (Primeira maiúscula) e alinhado
+                doc.text(statusLabel, 170, y);
+                
+                y += espacoLinha;
+            });
+        } else {
+            doc.setFont("helvetica", "italic");
+            doc.setTextColor(...secondaryColor);
+            doc.text("Nenhuma etapa registrada.", 18, y);
+            y += espacoLinha;
+        }
+
+        y += 10;
+
+        // --- 4. TESTES ---
+        doc.setTextColor(...primaryColor);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(fontSizeTitulo);
+        doc.text("Resultados de Testes", 15, y);
+        
+        y += 2;
+        doc.setDrawColor(...lineColor);
+        doc.line(15, y, 195, y);
+        y += espacoTitulo;
+
+        if (dados.testes && dados.testes.length > 0) {
+            dados.testes.forEach((teste) => {
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(0, 0, 0);
+                doc.text(`• ${teste.nome || formatarTexto(teste.tipo)}`, 18, y);
+
+                const isAprovado = teste.resultado === "APROVADO";
+                doc.setTextColor(isAprovado ? 0 : 200, isAprovado ? 128 : 0, 0);
+                doc.setFont("helvetica", "bold");
+                
+                // Ajuste: Resultado Formatado (Aprovado/Reprovado)
+                doc.text(formatarTexto(teste.resultado), 170, y);
+                
+                // Linha pontilhada
+                doc.setDrawColor(220, 220, 220);
+                doc.setLineDash([1, 1], 0);
+                doc.line(90, y, 168, y);
+                doc.setLineDash([]); 
+
+                y += espacoLinha;
+            });
+        } else {
+            doc.setFont("helvetica", "italic");
+            doc.setTextColor(...secondaryColor);
+            doc.text("Nenhum teste registrado.", 18, y);
+        }
+
+        // RODAPÉ
+        const pageHeight = doc.internal.pageSize.height;
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, pageHeight - 12, 210, 12, "F");
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text("Aerocode Systems © 2025 - Documento Confidencial", 105, pageHeight - 5, { align: "center" });
+
+        doc.save(`Relatorio_Aeronave_${dados.codigo}.pdf`);
+
+    } catch (error) {
+        console.error("Erro ao gerar PDF:", error);
+        alert("Falha ao gerar relatório.");
+    }
   };
 
   const podeEditar =
@@ -144,7 +357,7 @@ function GerenciarAeronaves() {
               <p><strong>Código:</strong> {a.codigo}</p>
               <p><strong>Capacidade:</strong> {a.capacidade} passageiros</p>
               <p><strong>Alcance:</strong> {a.alcance} km</p>
-              <p><strong>Cliente:</strong> {a.cliente}</p> {/* ⬅️ ADICIONADO */}
+              <p><strong>Cliente:</strong> {a.cliente}</p>
 
               <div className="acoes-aeronave">
                 {podeEditar && (
@@ -152,7 +365,11 @@ function GerenciarAeronaves() {
                     Excluir
                   </button>
                 )}
-                <button className="button-nova" style={{ marginLeft: "10px" }} onClick={() => gerarRelatorio(a)}>
+                <button 
+                  className="button-nova" 
+                  style={{ marginLeft: "10px" }} 
+                  onClick={() => gerarRelatorio(a)}
+                >
                   Relatório
                 </button>
               </div>

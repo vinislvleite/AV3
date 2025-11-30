@@ -5,11 +5,23 @@ import { StatusPeca } from '@prisma/client';
 const service = new PecaService();
 
 const mapStatusToEnumKey = (status: string): StatusPeca => {
-    switch (status) {
-        case 'em producao': return 'EM_PRODUCAO' as StatusPeca;
-        case 'em transporte': return 'EM_TRANSPORTE' as StatusPeca;
-        case 'pronta para uso': return 'PRONTA' as StatusPeca;
-        default: throw new Error("Valor de status inválido. Use 'em producao', 'em transporte' ou 'pronta para uso'.");
+    const statusUpper = status.toUpperCase();
+
+    switch (statusUpper) {
+        case 'EM PRODUCAO': 
+        case 'EM_PRODUCAO': 
+            return 'EM_PRODUCAO' as StatusPeca;
+            
+        case 'EM TRANSPORTE': 
+        case 'EM_TRANSPORTE': 
+            return 'EM_TRANSPORTE' as StatusPeca;
+            
+        case 'PRONTA PARA USO': 
+        case 'PRONTA': 
+            return 'PRONTA' as StatusPeca;
+            
+        default: 
+            throw new Error(`Valor de status inválido: ${status}`);
     }
 };
 
@@ -34,7 +46,7 @@ export class PecaController {
             const pecas = await service.listar();
             return res.json(pecas);
         } catch (error) {
-           return res.status(500).json({ error: "Erro ao listar peças." });
+             return res.status(500).json({ error: "Erro ao listar peças." });
         }
     }
 
@@ -48,7 +60,7 @@ export class PecaController {
         
         try {
             const novoStatusEnum = mapStatusToEnumKey(status);
-
+            
             await service.atualizarStatus(Number(id), novoStatusEnum);
             return res.json({ message: "Status atualizado com sucesso" });
         } catch (error: any) {

@@ -62,7 +62,6 @@ function EtapasProducao() {
 
 const adicionarEtapa = async (dados) => {
     try {
-      // 1. Converter Nomes para IDs (igual fizemos no associar)
       const idsFuncionarios = dados.funcionarios
         .map(nome => {
           const func = listaFuncionariosCompleta.find(f => f.nome === nome);
@@ -70,19 +69,17 @@ const adicionarEtapa = async (dados) => {
         })
         .filter(id => id !== null);
 
-      // 2. Enviar tudo para o Backend (incluindo o array funcionariosIds)
       await api.post("/etapas", {
         nome: dados.nome,
         prazoConclusao: dados.prazo,
         aeronaveCodigo: dados.aeronave,
-        funcionariosIds: idsFuncionarios // <--- O SEGREDO ESTÁ AQUI
+        funcionariosIds: idsFuncionarios
       });
       
       alert("Etapa criada com funcionários vinculados!");
       setMostrarModal(false);
       setDadosFormulario({ nome: "", status: "pendente", prazo: "", aeronave: "", funcionarios: [] });
       
-      // Recarrega a tela para aparecer os nomes
       carregarTudo();
     } catch (error) {
       console.error(error);
@@ -110,14 +107,12 @@ const excluirEtapa = async (id) => {
     
     if (window.confirm("Tem certeza que deseja excluir esta etapa?")) {
       try {
-        // Chamada real para o endpoint DELETE do Backend: /api/etapas/:id
         await api.delete(`/etapas/${id}`);
         
         alert("Etapa excluída com sucesso!");
-        carregarTudo(); // Recarrega a lista para remover a etapa excluída da tela
+        carregarTudo();
       } catch (error) {
         console.error("Erro ao excluir etapa:", error);
-        // Captura o erro do servidor (se a etapa não for encontrada, etc.)
         const msg = error.response?.data?.error || "Erro ao excluir etapa. Verifique as dependências ou o servidor.";
         alert(msg);
       }
@@ -138,17 +133,15 @@ const handleAssociarFuncionario = async () => {
     console.log("Lista Completa de Funcionários (para buscar ID):", listaFuncionariosCompleta);
 
     try {
-      // 1. Converter os nomes selecionados (Front) para IDs (Back)
       const idsParaEnviar = funcionariosSelecionados
         .map(nome => {
-          // O .trim() ajuda a evitar erros se tiver espaço sobrando no nome
           const func = listaFuncionariosCompleta.find(f => f.nome === nome);
           
           if (!func) {
              console.error(`ERRO: Não encontrei o ID para o nome: "${nome}"`);
              return null;
           }
-          return Number(func.id); // Garante que é número
+          return Number(func.id);
         })
         .filter(id => id !== null);
 
@@ -158,7 +151,6 @@ const handleAssociarFuncionario = async () => {
         return alert("Erro: Nenhum ID de funcionário foi encontrado. Verifique os nomes.");
       }
 
-      // 2. Enviar para o Backend
       console.log("Enviando POST para:", `/etapas/${etapaSelecionada}/associar`);
       const payload = { funcionariosIds: idsParaEnviar };
       console.log("Body enviado:", payload);
@@ -175,7 +167,6 @@ const handleAssociarFuncionario = async () => {
 
     } catch (error) {
       console.error("ERRO NA REQUISIÇÃO:", error);
-      // Aqui vamos tentar mostrar o erro exato que o backend mandou
       const msgErroBack = error.response?.data?.error;
       const msgDetalhe = error.response?.data?.details;
       
