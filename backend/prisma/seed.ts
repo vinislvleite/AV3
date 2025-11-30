@@ -7,52 +7,53 @@ import {
   TipoTeste,
   ResultadoTeste
 } from '@prisma/client'
+import * as bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
+const DEFAULT_PASSWORD = "123"
+const SALT_ROUNDS = 10;
 
 async function main() {
-  console.log("🌱 Iniciando seed...")
+  const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, SALT_ROUNDS)
 
   const admin = await prisma.funcionario.upsert({
     where: { usuario: "admin" },
-    update: {},
+    update: { senha: passwordHash },
     create: {
       nome: "Administrador Principal",
       telefone: "11999999999",
       endereco: "Sede Central",
       usuario: "admin",
-      senha: "123",
+      senha: passwordHash,
       nivelPermissao: Permissao.ADMINISTRADOR
     }
   })
 
   const engenheiro = await prisma.funcionario.upsert({
     where: { usuario: "engenheiro" },
-    update: {},
+    update: { senha: passwordHash },
     create: {
       nome: "Engenheiro Chefe",
       telefone: "11888888888",
       endereco: "Hangar 1",
       usuario: "engenheiro",
-      senha: "123",
+      senha: passwordHash,
       nivelPermissao: Permissao.ENGENHEIRO
     }
   })
 
   const operador = await prisma.funcionario.upsert({
     where: { usuario: "operador" },
-    update: {},
+    update: { senha: passwordHash },
     create: {
       nome: "Operador de Linha",
       telefone: "11777777777",
       endereco: "Linha de Montagem",
       usuario: "operador",
-      senha: "123",
+      senha: passwordHash,
       nivelPermissao: Permissao.OPERADOR
     }
   })
-
-  console.log("✅ Funcionários criados.")
 
   const aeronave = await prisma.aeronave.upsert({
     where: { codigo: 1 },
@@ -67,8 +68,6 @@ async function main() {
       dataEntrega: new Date().toISOString()
     }
   })
-
-  console.log("✅ Aeronave criada.")
 
   const peca1 = await prisma.peca.create({
     data: {
@@ -100,8 +99,6 @@ async function main() {
     }
   })
 
-  console.log("✅ Peças criadas.")
-
   const etapa1 = await prisma.etapaProducao.create({
     data: {
       nome: "Montagem Estrutural",
@@ -129,8 +126,6 @@ async function main() {
     }
   })
 
-  console.log("✅ Etapas de produção criadas.")
-
   await prisma.etapaFuncionario.createMany({
     data: [
       { etapaId: etapa1.id, funcionarioId: engenheiro.id },
@@ -139,34 +134,38 @@ async function main() {
     ]
   })
 
-  console.log("✅ Relações funcionário-etapa criadas.")
-
-  await prisma.teste.createMany({
-    data: [
-      {
-        tipo: TipoTeste.ELETRICO,
-        resultado: ResultadoTeste.APROVADO,
-        aeronaveId: aeronave.codigo
-      },
-      {
-        tipo: TipoTeste.AERODINAMICO,
-        resultado: ResultadoTeste.REPROVADO,
-        aeronaveId: aeronave.codigo
-      }
-    ]
+  const teste1 = await (prisma.teste.create as any)({
+    data: {
+      nome: "Teste Elétrico de Painel",
+      tipo: TipoTeste.ELETRICO,
+      resultado: ResultadoTeste.APROVADO,
+      aeronaveId: aeronave.codigo
+    }
   })
 
-  console.log("✅ Testes criados.")
+  const teste2 = await (prisma.teste.create as any)({
+    data: {
+      nome: "Teste de Túnel de Vento",
+      tipo: TipoTeste.AERODINAMICO,
+      resultado: ResultadoTeste.REPROVADO,
+      aeronaveId: aeronave.codigo
+    }
+  })
+
+  const teste3 = await (prisma.teste.create as any)({
+    data: {
+      nome: "Teste de Pressão Hidráulica",
+      tipo: TipoTeste.HIDRAULICO,
+      resultado: ResultadoTeste.APROVADO,
+      aeronaveId: aeronave.codigo
+    }
+  })
 
   await prisma.relatorio.create({
     data: {
       aeronaveId: aeronave.codigo
     }
   })
-
-  console.log("✅ Relatórios criados.")
-
-  console.log("🌱 Seed finalizado com sucesso!")
 }
 
 main()

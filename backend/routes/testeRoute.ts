@@ -6,5 +6,6 @@ const controller = new TesteController();
 
 router.post("/", controller.cadastrar);
 router.get("/", controller.listar);
+router.delete("/:id", controller.excluir);
 
 export { router as testeRoutes };

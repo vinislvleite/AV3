@@ -67,9 +67,9 @@ model EtapaProducao {
 
 model Teste {
   id         Int            @id @default(autoincrement())
+  nome       String
   tipo       TipoTeste
   resultado  ResultadoTeste
-
   aeronaveId Int
   aeronave   Aeronave       @relation(fields: [aeronaveId], references: [codigo], onDelete: Cascade)
 
