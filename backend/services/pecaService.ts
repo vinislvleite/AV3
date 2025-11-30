@@ -1,4 +1,5 @@
-import { prisma } from "../db";
+import { StatusPeca } from '@prisma/client';
+import { prisma } from "../db"; 
 
 export class PecaService {
 
@@ -8,14 +9,16 @@ export class PecaService {
                 data: {
                     nome: dados.nome,
                     fornecedor: dados.fornecedor,
-                    tipo: dados.tipo,
+                    tipo: dados.tipo, 
                     status: dados.status,
-                    aeronaveId: aeronaveCodigo
+                    aeronaveId: Number(aeronaveCodigo)
                 }
             });
-            console.log("Peça cadastrada!");
-        } catch (error) {
-            console.error("Erro ao cadastrar peça:", error);
+        } catch (error: any) {
+            if (error.code === 'P2003') {
+                throw new Error("Aeronave vinculada não existe.");
+            }
+            throw new Error("Falha ao cadastrar peça.");
         }
     }
 
@@ -25,21 +28,35 @@ export class PecaService {
         });
     }
 
-    public async buscarPorNome(nome: string) {
-        return await prisma.peca.findFirst({
-            where: { nome }
-        });
-    }
-
-    public async atualizarStatus(idPeca: number, novoStatus: any): Promise<void> { 
+    public async atualizarStatus(idPeca: number, novoStatus: StatusPeca): Promise<void> { 
+        const pecaExistente = await prisma.peca.findUnique({ where: { id: Number(idPeca) } });
+        if (!pecaExistente) {
+            throw new Error("Peça não encontrada.");
+        }
+        
         try {
             await prisma.peca.update({
-                where: { id: idPeca },
+                where: { id: Number(idPeca) },
                 data: { status: novoStatus }
             });
-            console.log("Status atualizado!");
         } catch (error) {
-            console.error("Erro ao atualizar status:", error);
+            throw new Error("Falha ao atualizar status.");
+        }
+    }
+    
+    public async excluirPeca(id: number): Promise<void> {
+        try {
+            await prisma.peca.delete({
+                where: { id: Number(id) }
+            });
+        } catch (error: any) {
+            if (error.code === 'P2025') {
+                throw new Error("Peça não encontrada. Verifique o ID.");
+            }
+            if (error.code === 'P2003') {
+                throw new Error("Impossível excluir. A peça está vinculada a outro registro.");
+            }
+            throw new Error("Falha ao excluir peça."); 
         }
     }
 }

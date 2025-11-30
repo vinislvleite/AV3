@@ -18,6 +18,16 @@ export class FuncionarioController {
         return res.json(funcionarios);
     }
 
+    async remover(req: Request, res: Response) {
+        const { id } = req.params;
+        try {
+            await service.remover(Number(id));
+            return res.status(204).send();
+        } catch (error: any) {
+            return res.status(400).json({ error: error.message || "Erro ao remover funcionário" });
+        }
+    }
+
     async login(req: Request, res: Response) {
         const { usuario, senha } = req.body;
         try {

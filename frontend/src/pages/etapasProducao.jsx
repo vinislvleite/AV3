@@ -10,12 +10,11 @@ function EtapasProducao() {
   const [etapas, setEtapas] = useState([]);
   const [funcionariosDisponiveis, setFuncionariosDisponiveis] = useState([]);
   const [aeronavesDisponiveis, setAeronavesDisponiveis] = useState([]);
-  const [listaFuncionariosCompleta, setListaFuncionariosCompleta] = useState([]); // Para buscar ID pelo nome
+  const [listaFuncionariosCompleta, setListaFuncionariosCompleta] = useState([]);
 
   const normalizar = (t) => t ? t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
   const tipoUsuario = normalizar(localStorage.getItem("cargo") || "operador");
   
-  // Normaliza permissão (Front usa Maiúsculo às vezes)
   const podeEditar = tipoUsuario === "administrador" || tipoUsuario === "engenheiro";
 
   const [dadosFormulario, setDadosFormulario] = useState({
@@ -26,33 +25,28 @@ function EtapasProducao() {
     funcionarios: [],
   });
 
-  // --- CARREGAR DADOS (CONECTADO AO BACK) ---
   const carregarTudo = async () => {
     try {
-      // 1. Busca Aeronaves e Funcionários
       const [resAero, resFunc] = await Promise.all([
         api.get("/aeronaves"),
         api.get("/funcionarios")
       ]);
       
       setAeronavesDisponiveis(resAero.data);
-      setListaFuncionariosCompleta(resFunc.data); // Guarda objetos com ID
-      setFuncionariosDisponiveis(resFunc.data.map(f => f.nome)); // Mantém compatibilidade com seu select visual
-
-      // 2. Busca Etapas de TODAS as aeronaves para manter o design de lista única
-      // (O backend lista por aeronave, então fazemos um loop aqui)
+      setListaFuncionariosCompleta(resFunc.data);
+      setFuncionariosDisponiveis(resFunc.data.map(f => f.nome));
       const promisesEtapas = resAero.data.map(a => api.get(`/etapas/aeronave/${a.codigo}`));
       const responsesEtapas = await Promise.all(promisesEtapas);
       
-      // Junta tudo num array só e formata para o padrão do seu front
       const todasEtapas = responsesEtapas.flatMap(r => r.data).map(e => ({
         id: e.id,
         nome: e.nome,
-        // Converte status numérico do banco (0,1,2) para string do seu front
         status: e.status === 0 ? "pendente" : e.status === 1 ? "em-andamento" : "finalizada",
         prazo: new Date(e.prazoConclusao).toISOString().split('T')[0],
         aeronave: String(e.aeronaveId),
-        funcionarios: e.funcionarios ? e.funcionarios.map(f => f.nome) : []
+        funcionarios: e.funcionarios
+        ? e.funcionarios.map(f => f.funcionario.nome)
+        : []
       }));
 
       setEtapas(todasEtapas);
@@ -66,27 +60,37 @@ function EtapasProducao() {
     carregarTudo();
   }, []);
 
-  // --- AÇÕES (CONECTADO AO BACK) ---
-
-  const adicionarEtapa = async (dados) => {
+const adicionarEtapa = async (dados) => {
     try {
+      // 1. Converter Nomes para IDs (igual fizemos no associar)
+      const idsFuncionarios = dados.funcionarios
+        .map(nome => {
+          const func = listaFuncionariosCompleta.find(f => f.nome === nome);
+          return func ? func.id : null;
+        })
+        .filter(id => id !== null);
+
+      // 2. Enviar tudo para o Backend (incluindo o array funcionariosIds)
       await api.post("/etapas", {
         nome: dados.nome,
         prazoConclusao: dados.prazo,
-        aeronaveCodigo: dados.aeronave
+        aeronaveCodigo: dados.aeronave,
+        funcionariosIds: idsFuncionarios // <--- O SEGREDO ESTÁ AQUI
       });
       
-      alert("Etapa criada com sucesso!");
+      alert("Etapa criada com funcionários vinculados!");
       setMostrarModal(false);
       setDadosFormulario({ nome: "", status: "pendente", prazo: "", aeronave: "", funcionarios: [] });
-      carregarTudo(); // Recarrega a lista
+      
+      // Recarrega a tela para aparecer os nomes
+      carregarTudo();
     } catch (error) {
-      alert("Erro ao criar etapa.");
+      console.error(error);
+      alert("Erro ao criar etapa: " + (error.response?.data?.error || "Erro desconhecido"));
     }
   };
 
   const atualizarStatus = async (id, novoStatusString) => {
-    // Mapeia a string do front para a ação do backend
     let action = "";
     if (novoStatusString === "em-andamento") action = "iniciar";
     if (novoStatusString === "finalizada") action = "finalizar";
@@ -101,49 +105,85 @@ function EtapasProducao() {
     }
   };
 
-  const excluirEtapa = async (id) => {
+const excluirEtapa = async (id) => {
     if (!podeEditar) return alert("Acesso negado.");
     
     if (window.confirm("Tem certeza que deseja excluir esta etapa?")) {
-      // Backend atual não tem rota DELETE implementada no controller que te mandei, 
-      // mas se criar, descomente abaixo:
-      // await api.delete(`/etapas/${id}`);
-      // carregarTudo();
-      alert("Funcionalidade de exclusão pendente no servidor.");
+      try {
+        // Chamada real para o endpoint DELETE do Backend: /api/etapas/:id
+        await api.delete(`/etapas/${id}`);
+        
+        alert("Etapa excluída com sucesso!");
+        carregarTudo(); // Recarrega a lista para remover a etapa excluída da tela
+      } catch (error) {
+        console.error("Erro ao excluir etapa:", error);
+        // Captura o erro do servidor (se a etapa não for encontrada, etc.)
+        const msg = error.response?.data?.error || "Erro ao excluir etapa. Verifique as dependências ou o servidor.";
+        alert(msg);
+      }
     }
   };
 
   const [etapaSelecionada, setEtapaSelecionada] = useState("");
-  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState([]); // Guarda nomes
+  const [funcionariosSelecionados, setFuncionariosSelecionados] = useState([]);
 
-  const handleAssociarFuncionario = async () => {
+const handleAssociarFuncionario = async () => {
     if (!podeEditar) return alert("Acesso negado.");
     if (!etapaSelecionada) return alert("Selecione uma etapa!");
-    if (funcionariosSelecionados.length === 0) return alert("Selecione um funcionário!");
+    if (funcionariosSelecionados.length === 0) return alert("Selecione pelo menos um funcionário!");
+
+    console.log("--- INICIANDO ASSOCIAÇÃO ---");
+    console.log("Etapa Selecionada (ID):", etapaSelecionada);
+    console.log("Nomes Selecionados:", funcionariosSelecionados);
+    console.log("Lista Completa de Funcionários (para buscar ID):", listaFuncionariosCompleta);
 
     try {
-      // O Backend espera 1 ID por vez na rota atual. 
-      // Vamos pegar o primeiro selecionado e buscar o ID dele.
-      const nomeFunc = funcionariosSelecionados[0];
-      const funcObj = listaFuncionariosCompleta.find(f => f.nome === nomeFunc);
+      // 1. Converter os nomes selecionados (Front) para IDs (Back)
+      const idsParaEnviar = funcionariosSelecionados
+        .map(nome => {
+          // O .trim() ajuda a evitar erros se tiver espaço sobrando no nome
+          const func = listaFuncionariosCompleta.find(f => f.nome === nome);
+          
+          if (!func) {
+             console.error(`ERRO: Não encontrei o ID para o nome: "${nome}"`);
+             return null;
+          }
+          return Number(func.id); // Garante que é número
+        })
+        .filter(id => id !== null);
 
-      if (!funcObj) return alert("Erro ao encontrar ID do funcionário.");
+      console.log("IDs convertidos que serão enviados:", idsParaEnviar);
 
-      await api.post(`/etapas/${etapaSelecionada}/funcionario`, {
-        funcionarioId: funcObj.id
-      });
+      if (idsParaEnviar.length === 0) {
+        return alert("Erro: Nenhum ID de funcionário foi encontrado. Verifique os nomes.");
+      }
 
-      alert("Funcionário associado!");
+      // 2. Enviar para o Backend
+      console.log("Enviando POST para:", `/etapas/${etapaSelecionada}/associar`);
+      const payload = { funcionariosIds: idsParaEnviar };
+      console.log("Body enviado:", payload);
+
+      await api.post(`/etapas/${etapaSelecionada}/associar`, payload);
+
+      console.log("SUCESSO: Resposta do servidor recebida!");
+      alert("Funcionário(s) associado(s) com sucesso!");
+      
       setMostrarAssociarModal(false);
       setEtapaSelecionada("");
       setFuncionariosSelecionados([]);
       carregarTudo();
+
     } catch (error) {
-      alert("Erro ao associar (verifique se já não está na etapa).");
+      console.error("ERRO NA REQUISIÇÃO:", error);
+      // Aqui vamos tentar mostrar o erro exato que o backend mandou
+      const msgErroBack = error.response?.data?.error;
+      const msgDetalhe = error.response?.data?.details;
+      
+      console.log("Mensagem do Back:", msgErroBack);
+      
+      alert(`Falha ao associar:\n${msgErroBack || error.message}\n${msgDetalhe || ''}`);
     }
   };
-
-  // --- MANTENDO O RESTO IGUAL ---
 
   const handleChange = (e) => {
     setDadosFormulario({
@@ -154,13 +194,11 @@ function EtapasProducao() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Validação visual mantida
     const etapaEmAndamento = etapas.find(
       (etapa) =>
         String(etapa.aeronave) === String(dadosFormulario.aeronave) &&
         etapa.status !== "finalizada"
     );
-    // Nota: Essa validação no front pode falhar se a lista não estiver atualizada com o banco
     
     adicionarEtapa(dadosFormulario);
   };

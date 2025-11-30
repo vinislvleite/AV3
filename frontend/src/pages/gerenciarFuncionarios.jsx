@@ -41,7 +41,8 @@ function GerenciarFuncionarios() {
         senha: novoFuncionario.senha,
         telefone: novoFuncionario.telefone,
         endereco: novoFuncionario.endereco,
-        nivelPermissao: novoFuncionario.nivelPermissao.toLowerCase(), 
+        // CORREÇÃO: Envia em MAIÚSCULO para corresponder ao Enum do Backend (ADMINISTRADOR)
+        nivelPermissao: novoFuncionario.nivelPermissao.toUpperCase(), 
       });
 
       alert(`Funcionário ${novoFuncionario.usuario} criado com sucesso!`);
@@ -60,6 +61,26 @@ function GerenciarFuncionarios() {
     }
   };
 
+  const excluirFuncionario = async (id) => {
+    if (window.confirm("Tem certeza que deseja excluir este funcionário?")) {
+      try {
+        await api.delete(`/funcionarios/${id}`);
+        alert("Funcionário removido!");
+        carregarFuncionarios();
+      } catch (error) {
+        console.error(error);
+        alert("Erro ao excluir funcionário.");
+      }
+    }
+  };
+
+  // NOVA FUNÇÃO: Formata 'ADMINISTRADOR' para 'Administrador'
+  const formatarNivel = (nivel) => {
+    if (!nivel) return "";
+    const lower = nivel.toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  };
+  
   return (
     <div className="funcionarios-container">
       <div className="funcionarios-header">
@@ -79,7 +100,13 @@ function GerenciarFuncionarios() {
                 <h3>{f.nome}</h3>
                 <p><strong>Usuário:</strong> {f.usuario}</p>
                 <p><strong>Telefone:</strong> {f.telefone}</p>
-                <p><strong>Nível:</strong> {f.nivelPermissao}</p>
+                {/* APLICAÇÃO DA FUNÇÃO AQUI: */}
+                <p><strong>Nível:</strong> {formatarNivel(f.nivelPermissao)}</p>
+              </div>
+              <div className="acoes-funcionario">
+                  <button className="button-excluir" onClick={() => excluirFuncionario(f.id)}>
+                    Excluir
+                  </button>
               </div>
             </div>
           ))}

@@ -8,6 +8,7 @@ router.post("/", controller.cadastrar);
 router.get("/aeronave/:codigo", controller.listarPorAeronave);
 router.patch("/:id/iniciar", controller.iniciar);
 router.patch("/:id/finalizar", controller.finalizar);
-router.post("/:id/funcionario", controller.associarFuncionario);
+router.post("/:id/associar", controller.associarFuncionario); 
+router.delete("/:id", controller.excluir);
 
 export { router as etapaRoutes };

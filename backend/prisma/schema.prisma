@@ -1,5 +1,3 @@
-// schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,7 +8,7 @@ datasource db {
 }
 
 model Aeronave {
-  codigo      Int           @id // ID manual (você digita o número no front)
+  codigo      Int           @id
   modelo      String
   tipo        TipoAeronave
   capacidade  Int
@@ -27,27 +25,26 @@ model Aeronave {
 }
 
 model Funcionario {
-  id             Int           @id @default(autoincrement()) // ID Automático (1, 2, 3...)
+  id             Int                @id @default(autoincrement())
   nome           String
   telefone       String
   endereco       String
-  usuario        String        @unique
+  usuario        String             @unique
   senha          String
   nivelPermissao Permissao
 
-  etapas         EtapaProducao[]
+  etapas         EtapaFuncionario[]
 
   @@map("funcionarios")
 }
 
 model Peca {
-  id         Int        @id @default(autoincrement()) // ID Automático
+  id         Int        @id @default(autoincrement())
   nome       String
   tipo       TipoPeca
   fornecedor String
   status     StatusPeca
 
-  // Relação corrigida: aeronaveId agora é Int para bater com Aeronave.codigo
   aeronaveId Int
   aeronave   Aeronave   @relation(fields: [aeronaveId], references: [codigo], onDelete: Cascade)
 
@@ -55,26 +52,24 @@ model Peca {
 }
 
 model EtapaProducao {
-  id             Int        @id @default(autoincrement()) // ID Automático
+  id             Int               @id @default(autoincrement())
   nome           String
   prazoConclusao DateTime
-  status         Int        @default(0) // 0, 1, 2
+  status         Int               @default(0)
 
-  // Relação corrigida: aeronaveId agora é Int
   aeronaveId     Int
-  aeronave       Aeronave   @relation(fields: [aeronaveId], references: [codigo], onDelete: Cascade)
+  aeronave       Aeronave          @relation(fields: [aeronaveId], references: [codigo], onDelete: Cascade)
 
-  funcionarios   Funcionario[]
+  funcionarios   EtapaFuncionario[]
 
   @@map("etapas_producao")
 }
 
 model Teste {
-  id         Int            @id @default(autoincrement()) // ID Automático
+  id         Int            @id @default(autoincrement())
   tipo       TipoTeste
   resultado  ResultadoTeste
 
-  // Relação corrigida: aeronaveId agora é Int
   aeronaveId Int
   aeronave   Aeronave       @relation(fields: [aeronaveId], references: [codigo], onDelete: Cascade)
 
@@ -85,11 +80,21 @@ model Relatorio {
   id          Int      @id @default(autoincrement())
   data        DateTime @default(now())
 
-  // Relação corrigida: aeronaveId agora é Int
   aeronaveId  Int
   aeronave    Aeronave @relation(fields: [aeronaveId], references: [codigo], onDelete: Cascade)
 
   @@map("relatorios")
+}
+
+model EtapaFuncionario {
+  etapaId       Int
+  funcionarioId Int
+
+  etapa         EtapaProducao @relation(fields: [etapaId], references: [id], onDelete: Cascade)
+  funcionario   Funcionario   @relation(fields: [funcionarioId], references: [id], onDelete: Cascade)
+
+  @@id([etapaId, funcionarioId])
+  @@map("etapas_funcionarios")
 }
 
 enum TipoAeronave {

@@ -6,36 +6,36 @@ function GerenciarPecas() {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarModalStatus, setMostrarModalStatus] = useState(false);
 
-  // Estados do Banco
   const [pecas, setPecas] = useState([]);
   const [aeronaves, setAeronaves] = useState([]);
 
-  // Estados do Formulário
+  // ESTADO CORRIGIDO: Usa a constante Enum (CAPS LOCK)
   const [novaPeca, setNovaPeca] = useState({
     nome: "",
     tipo: "NACIONAL",
     fornecedor: "",
-    status: "em producao",
-    aeronaveCodigo: "" // Obrigatório para o banco
+    status: "EM_PRODUCAO",
+    aeronaveCodigo: "" 
   });
 
+  // ESTADO CORRIGIDO: Usa a constante Enum (CAPS LOCK)
   const [pecaSelecionada, setPecaSelecionada] = useState("");
-  const [novoStatus, setNovoStatus] = useState("em producao");
+  const [novoStatus, setNovoStatus] = useState("EM_PRODUCAO");
 
-  // 1. CARREGAR DADOS (GET)
+  const carregarDados = async () => {
+    try {
+      const [resPecas, resAero] = await Promise.all([
+        api.get("/pecas"),
+        api.get("/aeronaves")
+      ]);
+      setPecas(resPecas.data);
+      setAeronaves(resAero.data);
+    } catch (error) {
+      console.error("Erro ao carregar dados:", error);
+    }
+  };
+
   useEffect(() => {
-    const carregarDados = async () => {
-      try {
-        const [resPecas, resAero] = await Promise.all([
-          api.get("/pecas"),
-          api.get("/aeronaves")
-        ]);
-        setPecas(resPecas.data);
-        setAeronaves(resAero.data);
-      } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-      }
-    };
     carregarDados();
   }, []);
 
@@ -43,7 +43,6 @@ function GerenciarPecas() {
     setNovaPeca({ ...novaPeca, [e.target.name]: e.target.value });
   };
 
-  // 2. CADASTRAR (POST)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -57,43 +56,41 @@ function GerenciarPecas() {
         nome: novaPeca.nome,
         tipo: novaPeca.tipo,
         fornecedor: novaPeca.fornecedor,
-        status: novaPeca.status,
+        status: novaPeca.status, // Agora é 'EM_PRODUCAO'
         aeronaveCodigo: novaPeca.aeronaveCodigo
       });
 
       alert("Peça cadastrada com sucesso!");
       setMostrarModal(false);
       
-      // Recarrega lista
-      const res = await api.get("/pecas");
-      setPecas(res.data);
-
-      // Reseta form
       setNovaPeca({ 
         nome: "", 
         tipo: "NACIONAL", 
         fornecedor: "", 
-        status: "em producao", 
+        status: "EM_PRODUCAO", 
         aeronaveCodigo: "" 
       });
 
+      carregarDados();
     } catch (error) {
-      alert("Erro ao cadastrar peça: " + (error.response?.data?.error || "Erro desconhecido"));
+      const msg = error.response?.data?.error || "Erro desconhecido ao cadastrar.";
+      alert("Erro ao cadastrar peça: " + msg);
     }
   };
 
-  // 3. EXCLUIR (DELETE)
-  // Nota: Seu backend atual não tem rota DELETE para peças no controller que fiz. 
-  // Se precisar, descomente abaixo e adicione no backend.
   const excluirPeca = async (id) => {
     if (window.confirm("Tem certeza que deseja excluir esta peça?")) {
-      // await api.delete(`/pecas/${id}`); 
-      // setPecas(pecas.filter((p) => p.id !== id));
-      alert("Funcionalidade de exclusão pendente no servidor.");
+      try {
+        await api.delete(`/pecas/${id}`); 
+        alert("Peça excluída com sucesso!");
+        carregarDados();
+      } catch (error) {
+        const msg = error.response?.data?.error || "Erro ao excluir peça.";
+        alert(msg);
+      }
     }
   };
 
-  // 4. ATUALIZAR STATUS (PATCH)
   const atualizarStatus = async () => {
     if (!pecaSelecionada) {
       alert("Selecione uma peça para atualizar o status.");
@@ -101,26 +98,27 @@ function GerenciarPecas() {
     }
 
     try {
+      // Envia o Enum Key (EM_PRODUCAO) que será mapeado no Controller
       await api.patch(`/pecas/${pecaSelecionada}/status`, { status: novoStatus });
       
       alert("Status atualizado!");
       setMostrarModalStatus(false);
       setPecaSelecionada("");
-      setNovoStatus("em producao");
+      setNovoStatus("EM_PRODUCAO"); // Reseta para a constante
 
-      // Recarrega lista
-      const res = await api.get("/pecas");
-      setPecas(res.data);
+      carregarDados();
     } catch (error) {
-      alert("Erro ao atualizar status.");
+      const msg = error.response?.data?.error || "Erro ao atualizar status.";
+      alert(msg);
     }
   };
 
+  // Mapeia o ENUM KEY (CAPS LOCK) para o texto de exibição
   const formatarStatus = (status) => {
     const mapa = {
-      "em producao": "Em produção",
-      "em transporte": "Em transporte",
-      "pronta para uso": "Pronta para uso"
+      "EM_PRODUCAO": "Em produção",
+      "EM_TRANSPORTE": "Em transporte",
+      "PRONTA": "Pronta para uso"
     };
     return mapa[status] || status;
   };
@@ -158,7 +156,7 @@ function GerenciarPecas() {
               <p><strong>ID:</strong> {p.id}</p>
               <p><strong>Fornecedor:</strong> {p.fornecedor || "Não informado"}</p>
               <p><strong>Status:</strong> {formatarStatus(p.status)}</p>
-              <p><strong>Aeronave:</strong> {p.aeronave ? p.aeronave.modelo : "N/A"}</p>
+              <p><strong>Aeronave:</strong> {aeronaves.find(a => a.codigo === p.aeronaveId)?.modelo || "N/A"}</p>
 
               <div className="acoes-peca">
                 <button
@@ -183,7 +181,6 @@ function GerenciarPecas() {
 
             <form onSubmit={handleSubmit}>
               
-              {/* CAMPO NOVO: AERONAVE (Obrigatório para o Back) */}
               <div className="form-group">
                 <label>Vincular Aeronave</label>
                 <select 
@@ -286,9 +283,10 @@ function GerenciarPecas() {
                 value={novoStatus}
                 onChange={(e) => setNovoStatus(e.target.value)}
               >
-                <option value="em producao">Em produção</option>
-                <option value="em transporte">Em transporte</option>
-                <option value="pronta para uso">Pronta para uso</option>
+                {/* VALORES CORRIGIDOS: Usam a chave Enum */}
+                <option value="EM_PRODUCAO">Em produção</option>
+                <option value="EM_TRANSPORTE">Em transporte</option>
+                <option value="PRONTA">Pronta para uso</option>
               </select>
             </div>
 

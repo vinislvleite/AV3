@@ -4,11 +4,11 @@ export class FuncionarioService {
 
     public async cadastrar(dados: any): Promise<void> {
         const existente = await prisma.funcionario.findFirst({
-            where: { OR: [{ id: dados.id }, { usuario: dados.usuario }] }
+            where: { usuario: dados.usuario }
         });
 
         if (existente) {
-            throw new Error("Funcionário já existe!");
+            throw new Error(`O usuário ${dados.usuario} já existe!`);
         }
 
         await prisma.funcionario.create({
@@ -17,20 +17,36 @@ export class FuncionarioService {
                 telefone: dados.telefone,
                 endereco: dados.endereco,
                 usuario: dados.usuario,
-                senha: dados.senha, 
+                senha: dados.senha,
                 nivelPermissao: dados.nivelPermissao
             }
         });
-        console.log("Funcionário cadastrado!");
     }
 
     public async listar() {
         return await prisma.funcionario.findMany();
     }
 
+    public async buscarPorId(id: number) {
+        return await prisma.funcionario.findUnique({
+            where: { id }
+        });
+    }
+
     public async buscarPorUsuario(usuario: string) {
         return await prisma.funcionario.findUnique({
             where: { usuario }
+        });
+    }
+
+    public async remover(id: number): Promise<void> {
+        const funcionario = await prisma.funcionario.findUnique({ where: { id } });
+        if (!funcionario) {
+            throw new Error("Funcionário não encontrado.");
+        }
+
+        await prisma.funcionario.delete({
+            where: { id }
         });
     }
 
