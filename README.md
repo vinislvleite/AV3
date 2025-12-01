@@ -22,6 +22,8 @@ Abra um terminal, acesse a pasta do servidor e instale as dependências:
 
 cd backend<br>
 npm install<br>
+Antes de dar npm run dev, mude o .env para sua conexão com o banco<br>
+DATABASE_URL="mysql://root:senha@localhost:3306/nome_do_banco"<br>
 npm run dev<br>
 
 (O servidor rodará na porta 3333 e fará a configuração inicial do banco de dados automaticamente).
